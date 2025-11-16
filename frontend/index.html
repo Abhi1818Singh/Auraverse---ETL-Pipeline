@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>File Schema Inspector</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <header>
+    <h1>File Schema Inspector</h1>
+    <p>Upload a txt / pdf / html / xml / json file → See inferred schema</p>
+  </header>
+
+  <main>
+    <section class="input-section">
+      <h2>1. Upload File</h2>
+
+      <input type="file" id="file-input" />
+      <button id="analyze-btn">Analyze Schema</button>
+      <p id="status"></p>
+    </section>
+
+    <section class="output-section">
+      <div class="column">
+        <h2>2. Result</h2>
+        <div id="schema-summary" class="card">
+          <p>No file analyzed yet.</p>
+        </div>
+      </div>
+
+      <div class="column">
+        <h2>3. History</h2>
+        <div id="history" class="card">
+          <p>No history yet.</p>
+        </div>
+      </div>
+
+      <div class="column">
+        <h2>4. Stored NoSQL Docs</h2>
+        <div class="card">
+          <div style="margin-bottom: 0.5rem;">
+            <input id="nosql-search-input" type="text" placeholder="Search by filename..."
+              style="width: 70%; padding: 0.35rem; border-radius: 0.4rem; border: 1px solid #374151; background:#020617; color:#e5e7eb;" />
+            <button id="nosql-search-btn" style="padding: 0.35rem 0.9rem; margin-left: 0.3rem;">Search</button>
+            <button id="nosql-reload-btn" style="padding: 0.35rem 0.9rem; margin-left: 0.3rem;">Reload</button>
+          </div>
+          <div id="nosql-list">
+            <p>No NoSQL documents yet.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer>
+    <span>Demo • Dynamic File Schema Extraction
+      <hr>
+      By Team Bite Brigade -- Proud OSC and AIML Members. ❤️
+    </span>
+
+  </footer>
+
+  <!-- <script>
+    const fileInput = document.getElementById("file-input");
+    const analyzeBtn = document.getElementById("analyze-btn");
+    const statusEl = document.getElementById("status");
+    const schemaSummaryEl = document.getElementById("schema-summary");
+
+    analyzeBtn.addEventListener("click", async () => {
+      const file = fileInput.files[0];
+      if (!file) {
+        statusEl.textContent = "❌ Please choose a file first.";
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("file", file);
+
+      statusEl.textContent = "Analyzing file schema...";
+      schemaSummaryEl.innerHTML = "";
+
+      try {
+        const res = await fetch("/api/file_schema", {
+          method: "POST",
+          body: formData
+        });
+
+        if (!res.ok) {
+          let msg = res.status;
+          try {
+            const err = await res.json();
+            msg = err.detail || msg;
+          } catch (_) { }
+          statusEl.textContent = "❌ Error: " + msg;
+          return;
+        }
+
+        const data = await res.json();
+
+        // Build simple human-readable text (not raw JSON)
+        const lines = [];
+        lines.push(`File name: ${data.filename}`);
+        lines.push(`Detected format: ${data.detected_format}`);
+        lines.push(`Interpreted as: ${data.used_content_type}`);
+        lines.push(`Field count: ${data.field_count}`);
+        lines.push("");
+        lines.push("Fields (field → type):");
+
+        (data.schema || []).forEach(f => {
+          lines.push(`- ${f.field} → ${f.value_type}`);
+        });
+
+        // NEW: show important points / insights
+        if (data.insights && data.insights.length) {
+          lines.push("");
+          lines.push("Important points:");
+          data.insights.forEach(pt => {
+            lines.push(`- ${pt}`);
+          });
+        }
+
+        schemaSummaryEl.innerHTML = `<pre>${lines.join("\n")}</pre>`;
+        statusEl.textContent = "✅ Schema extracted.";
+
+      } catch (e) {
+        console.error(e);
+        statusEl.textContent = "❌ Network error while analyzing file.";
+        schemaSummaryEl.innerHTML = "<p>Error.</p>";
+      }
+    });
+  </script> -->
+
+
+
+  <!-- <script>
+  const fileInput = document.getElementById("file-input");
+  const analyzeBtn = document.getElementById("analyze-btn");
+  const statusEl = document.getElementById("status");
+  const schemaSummaryEl = document.getElementById("schema-summary");
+  const historyEl = document.getElementById("history");
+
+  let history = [];
+
+  function renderHistory() {
+    if (!history.length) {
+      historyEl.innerHTML = "<p>No history yet.</p>";
+      return;
+    }
+
+    historyEl.innerHTML = history
+      .map((h, idx) => `
+        <div class="hist-item">
+          <button class="hist-btn" data-idx="${idx}">
+            ${idx + 1}. ${h.fileName} — ${h.time}
+          </button>
+        </div>
+      `)
+      .join("");
+
+    document.querySelectorAll(".hist-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const idx = Number(btn.dataset.idx);
+        const h = history[idx];
+        schemaSummaryEl.innerHTML = "<pre>" + JSON.stringify(h.result, null, 2) + "</pre>";
+        statusEl.textContent = "Showing history for: " + h.fileName;
+      });
+    });
+  }
+
+  analyzeBtn.addEventListener("click", async () => {
+    const file = fileInput.files[0];
+    if (!file) {
+      statusEl.textContent = "❌ Please choose a file first.";
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    statusEl.textContent = "Analyzing file schema...";
+    schemaSummaryEl.innerHTML = "";
+
+    try {
+      const res = await fetch("/api/file_schema", {
+        method: "POST",
+        body: formData
+      });
+
+      if (!res.ok) {
+        let msg = res.status;
+        try {
+          const err = await res.json();
+          msg = err.detail || msg;
+        } catch (_) {}
+        statusEl.textContent = "❌ Error: " + msg;
+        return;
+      }
+
+      const data = await res.json();
+
+      // Show raw JSON result (detected array with type, parsed, schema, insights)
+      schemaSummaryEl.innerHTML = "<pre>" + JSON.stringify(data, null, 2) + "</pre>";
+      statusEl.textContent = "✅ Schema extracted.";
+
+      // Add to history (front-end only)
+      const record = {
+        fileName: file.name,
+        time: new Date().toLocaleString(),
+        result: data
+      };
+      history.unshift(record);
+      if (history.length > 10) {
+        history = history.slice(0, 10); // keep last 10
+      }
+      renderHistory();
+    } catch (e) {
+      console.error(e);
+      statusEl.textContent = "❌ Network error while analyzing file.";
+      schemaSummaryEl.innerHTML = "<p>Error.</p>";
+    }
+  });
+</script> -->
+
+
+
+  <script>
+    const fileInput = document.getElementById("file-input");
+    const analyzeBtn = document.getElementById("analyze-btn");
+    const statusEl = document.getElementById("status");
+    const schemaSummaryEl = document.getElementById("schema-summary");
+    const historyEl = document.getElementById("history");
+
+    const nosqlListEl = document.getElementById("nosql-list");
+    const nosqlSearchInput = document.getElementById("nosql-search-input");
+    const nosqlSearchBtn = document.getElementById("nosql-search-btn");
+    const nosqlReloadBtn = document.getElementById("nosql-reload-btn");
+
+    let history = [];
+
+    // ---------- History UI ----------
+    function renderHistory() {
+      if (!history.length) {
+        historyEl.innerHTML = "<p>No history yet.</p>";
+        return;
+      }
+
+      historyEl.innerHTML = history
+        .map((h, idx) => `
+        <div class="hist-item">
+          <button class="hist-btn" data-idx="${idx}">
+            ${idx + 1}. ${h.fileName} — ${h.time}
+          </button>
+        </div>
+      `)
+        .join("");
+
+      document.querySelectorAll(".hist-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const idx = Number(btn.dataset.idx);
+          const h = history[idx];
+          schemaSummaryEl.innerHTML = "<pre>" + h.summary + "</pre>";
+          statusEl.textContent = "Showing history for: " + h.fileName;
+        });
+      });
+    }
+
+    // ---------- NoSQL docs UI ----------
+    async function loadNosqlDocs(query = "") {
+      nosqlListEl.innerHTML = "<p>Loading NoSQL documents...</p>";
+
+      try {
+        const url = query
+          ? `/api/nosql_search?q=${encodeURIComponent(query)}`
+          : `/api/nosql_docs`;
+
+        const res = await fetch(url);
+        if (!res.ok) {
+          nosqlListEl.innerHTML = "<p>Failed to load NoSQL documents.</p>";
+          return;
+        }
+
+        const data = await res.json(); // { items: [...] }
+        const items = data.items || [];
+
+        if (!items.length) {
+          nosqlListEl.innerHTML = "<p>No NoSQL documents found.</p>";
+          return;
+        }
+
+        nosqlListEl.innerHTML = items
+          .map(
+            (d) => `
+          <div class="hist-item">
+            <button class="hist-btn nosql-doc-btn" data-id="${d.id}">
+              ${d.filename || "(no filename)"}<br/>
+              <small>${d.stored_at || ""} • fields: ${d.schema_field_count}</small>
+            </button>
+          </div>
+        `
+          )
+          .join("");
+
+        document.querySelectorAll(".nosql-doc-btn").forEach(btn => {
+          btn.addEventListener("click", async () => {
+            const id = btn.dataset.id;
+            try {
+              const res = await fetch(`/api/nosql_docs/${id}`);
+              if (!res.ok) {
+                statusEl.textContent = "❌ Failed to load document";
+                return;
+              }
+              const doc = await res.json();
+              schemaSummaryEl.innerHTML =
+                "<pre>" + JSON.stringify(doc, null, 2) + "</pre>";
+              statusEl.textContent = "Showing stored NoSQL document: " + (doc.filename || id);
+            } catch (e) {
+              statusEl.textContent = "❌ Error loading document.";
+            }
+          });
+        });
+      } catch (e) {
+        console.error(e);
+        nosqlListEl.innerHTML = "<p>Error while loading NoSQL documents.</p>";
+      }
+    }
+
+    nosqlSearchBtn.addEventListener("click", () => {
+      const q = nosqlSearchInput.value.trim();
+      loadNosqlDocs(q);
+    });
+
+    nosqlReloadBtn.addEventListener("click", () => {
+      nosqlSearchInput.value = "";
+      loadNosqlDocs("");
+    });
+
+    // ---------- Upload & Analyze ----------
+    analyzeBtn.addEventListener("click", async () => {
+      const file = fileInput.files[0];
+      if (!file) {
+        statusEl.textContent = "❌ Please choose a file first.";
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("file", file);
+
+      statusEl.textContent = "Analyzing...";
+      schemaSummaryEl.innerHTML = "";
+
+      try {
+        const res = await fetch("/api/file_schema", {
+          method: "POST",
+          body: formData
+        });
+
+        if (!res.ok) {
+          let msg = res.status;
+          try {
+            const err = await res.json();
+            msg = err.detail || msg;
+          } catch (_) { }
+          statusEl.textContent = "❌ Error: " + msg;
+          return;
+        }
+
+        const data = await res.json();  // { detected: [...] }
+
+        const pretty = JSON.stringify(data, null, 2);
+        schemaSummaryEl.innerHTML = "<pre>" + pretty + "</pre>";
+        statusEl.textContent = "✅ Done.";
+
+        const record = {
+          fileName: file.name,
+          time: new Date().toLocaleString(),
+          summary: pretty
+        };
+
+        history.unshift(record);
+        if (history.length > 10) history = history.slice(0, 10);
+        renderHistory();
+
+        // Reload NoSQL list in case this was a JSON file stored to Mongo
+        loadNosqlDocs("");
+      } catch (e) {
+        console.error(e);
+        statusEl.textContent = "❌ Network error.";
+        schemaSummaryEl.innerHTML = "<p>Error.</p>";
+      }
+    });
+
+    // Initial load: show NoSQL docs (if any)
+    loadNosqlDocs("");
+  </script>
+
+</body>
+
+</html>
